@@ -13,7 +13,7 @@ namespace ImageProcessing
         {
             EnergyMap energy = CalcEnergyMap(image);
             var imageSize = new ImageSize(image.Width, image.Height);
-            Seam lowestSeam = findSeam(imageSize, energy);
+            Seam lowestSeam = FindSeam(imageSize, energy);
         }
         double CalcPixelEnergy(Color? left, Color middle, Color? right)
         {
@@ -67,7 +67,7 @@ namespace ImageProcessing
         {
             return new Color(pixel.R, pixel.G, pixel.B, pixel.A);
         }
-        Seam findSeam(ImageSize size, EnergyMap energy)
+        Seam FindSeam(ImageSize size, EnergyMap energy)
         {
             Console.WriteLine("Finding the seam operation begins");
             var (w, h) = size;
@@ -84,10 +84,8 @@ namespace ImageProcessing
             {
                 for (int x = 0; x < w; x++)
                 {
-                    Console.WriteLine($"The Pixel ({x}, {y}) is being calculated");
                     var minPrevEnergy = double.MaxValue;
                     var prevX = x;
-
 
                     // Check first
                     for (int i = (x - 1); i <= (x + 1); i++)
@@ -104,18 +102,38 @@ namespace ImageProcessing
                 }
             }
 
-            for (int y = 1; y < h; y++)
+            Coordinate? lastMinCoordinate = null;
+            double lastSeamEnergy = double.MaxValue;
+            for (int x = 0; x < w; x++)
             {
-                for (int x = 0; x < w; x++)
+                int y = h - 1;
+                if (seamEnergies[y, x].energy < lastSeamEnergy)
                 {
-                    Console.WriteLine(seamEnergies[y, x].energy);
+                    lastSeamEnergy = seamEnergies[y, x].energy;
+                    lastMinCoordinate = new Coordinate(x, y);
                 }
             }
 
-            // Find where the minimum seam ends
-            Console.WriteLine("Finding the seam operation ends");
-            return [];
+            if (!lastMinCoordinate.HasValue)
+            {
+                Console.WriteLine("Failed to find the minimum energy seam");
+                return [];
+            }
 
+            // Re-create the seam
+            Seam result = new Coordinate[h];
+            var (lastX, lastY) = lastMinCoordinate.Value;
+            Coordinate? current = seamEnergies[lastY, lastX].coordinate;
+            int index = h - 1;
+
+            while (current.HasValue)
+            {
+                result[index--] = current.Value;
+                var (cx, cy) = current.Value;
+                current = seamEnergies[cy, cx].previous;
+            }
+
+            return result;
         }
     }
 }
