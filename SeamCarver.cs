@@ -13,6 +13,11 @@ namespace ImageProcessing
     {
         public void ProcessImage(Image<Rgba32> image, ImageSize newSize)
         {
+            if (newSize.width > image.Width || newSize.height > image.Height)
+            {
+                Console.WriteLine("Cannot create a bigger image");
+                return;
+            }
             var imageSize = new ImageSize(image.Width, image.Height);
             ResizeWidth(image, newSize.width);
 
@@ -20,14 +25,14 @@ namespace ImageProcessing
             ResizeWidth(image, newSize.height);
             image.Mutate(ctx => ctx.RotateFlip(RotateMode.Rotate270, FlipMode.None));
 
-            // Remove Target
+            // Remove
             image.Mutate(ctx => ctx.Crop(new Rectangle(0, 0, newSize.width, newSize.height)));
         }
 
-        public void ResizeWidth(Image<Rgba32> image, int target_width)
+        public void ResizeWidth(Image<Rgba32> image, int targetWidth, bool wisTransposed = false)
         {
             int current_width = image.Width;
-            while (current_width != target_width)
+            while (current_width > targetWidth)
             {
                 var imageSize = new ImageSize(current_width, image.Height);
                 EnergyMap energy = CalcEnergyMap(image, imageSize);
@@ -96,7 +101,7 @@ namespace ImageProcessing
             // Put the first row values
             for (int x = 0; x < w; x++)
             {
-                seamEnergies[0, x] = new SeamPixel(energy[x, 0], new Coordinate(x, 0));
+                seamEnergies[0, x] = new SeamPixel(energy[0, x], new Coordinate(x, 0));
             }
 
             // Complete the DB table
