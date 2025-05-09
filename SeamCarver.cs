@@ -16,11 +16,11 @@ namespace ImageProcessing
             var imageSize = new ImageSize(image.Width, image.Height);
             ResizeWidth(image, newSize.width);
 
-            Console.WriteLine("Transposing");
             image.Mutate(ctx => ctx.RotateFlip(RotateMode.Rotate90, FlipMode.None));
             ResizeWidth(image, newSize.height);
-            Console.WriteLine("Transposing");
-            image.Mutate(ctx => ctx.RotateFlip(RotateMode.None, FlipMode.Horizontal));
+            image.Mutate(ctx => ctx.RotateFlip(RotateMode.Rotate270, FlipMode.None));
+
+            // Remove Target
             image.Mutate(ctx => ctx.Crop(new Rectangle(0, 0, newSize.width, newSize.height)));
         }
 
@@ -34,7 +34,6 @@ namespace ImageProcessing
                 Seam lowestSeam = FindSeam(imageSize, energy);
                 RemoveSeam(image, lowestSeam);
                 imageSize = new ImageSize(image.Width, image.Height);
-                Console.WriteLine($"Current Size: ({current_width}, {image.Height})");
                 current_width--;
             }
         }
