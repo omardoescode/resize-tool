@@ -1,5 +1,7 @@
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
+
 
 namespace ImageProcessing
 {
@@ -9,11 +11,32 @@ namespace ImageProcessing
     public readonly record struct Color(int r, int g, int b, int a);
     class SeamCarver
     {
-        public void ProcessImage(Image<Rgba32> image, ImageSize new_size)
+        public void ProcessImage(Image<Rgba32> image, ImageSize newSize)
         {
-            EnergyMap energy = CalcEnergyMap(image);
             var imageSize = new ImageSize(image.Width, image.Height);
-            Seam lowestSeam = FindSeam(imageSize, energy);
+            ResizeWidth(image, newSize.width);
+
+            Console.WriteLine("Transposing");
+            image.Mutate(ctx => ctx.RotateFlip(RotateMode.Rotate90, FlipMode.None));
+            ResizeWidth(image, newSize.height);
+            Console.WriteLine("Transposing");
+            image.Mutate(ctx => ctx.RotateFlip(RotateMode.None, FlipMode.Horizontal));
+            image.Mutate(ctx => ctx.Crop(new Rectangle(0, 0, newSize.width, newSize.height)));
+        }
+
+        public void ResizeWidth(Image<Rgba32> image, int target_width)
+        {
+            int current_width = image.Width;
+            while (current_width != target_width)
+            {
+                var imageSize = new ImageSize(current_width, image.Height);
+                EnergyMap energy = CalcEnergyMap(image, imageSize);
+                Seam lowestSeam = FindSeam(imageSize, energy);
+                RemoveSeam(image, lowestSeam);
+                imageSize = new ImageSize(image.Width, image.Height);
+                Console.WriteLine($"Current Size: ({current_width}, {image.Height})");
+                current_width--;
+            }
         }
         double CalcPixelEnergy(Color? left, Color middle, Color? right)
         {
@@ -33,15 +56,14 @@ namespace ImageProcessing
 
             return Math.Sqrt(lEnergy + rEnergy);
         }
-        EnergyMap CalcEnergyMap(Image<Rgba32> image)
+        EnergyMap CalcEnergyMap(Image<Rgba32> image, ImageSize cur_size)
         {
-            int width = image.Width;
-            int height = image.Height;
-            EnergyMap result = new double[width, height];
+            var (width, height) = cur_size;
+            EnergyMap result = new double[height, width];
 
-            for (int x = 0; x < width; x++)
+            for (int y = 0; y < height; y++)
             {
-                for (int y = 0; y < height; y++)
+                for (int x = 0; x < width; x++)
                 {
                     Rgba32? left = (x - 1) >= 0 ? image[x - 1, y] : null;
                     Rgba32 middle = image[x, y];
@@ -69,9 +91,8 @@ namespace ImageProcessing
         }
         Seam FindSeam(ImageSize size, EnergyMap energy)
         {
-            Console.WriteLine("Finding the seam operation begins");
             var (w, h) = size;
-            SeamPixel[,] seamEnergies = new SeamPixel[w, h]; // The DB table
+            SeamPixel[,] seamEnergies = new SeamPixel[h, w]; // The DB table
 
             // Put the first row values
             for (int x = 0; x < w; x++)
@@ -134,6 +155,19 @@ namespace ImageProcessing
             }
 
             return result;
+        }
+        void RemoveSeam(Image<Rgba32> image, Seam seam)
+        {
+            for (int y = 0; y < image.Height; y++)
+            {
+                int seamX = seam[y].x;
+
+                for (int x = seamX; x < image.Width - 1; x++)
+                {
+                    image[x, y] = image[x + 1, y];
+                }
+            }
+
         }
     }
 }
