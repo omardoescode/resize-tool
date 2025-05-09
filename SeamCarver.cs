@@ -20,16 +20,19 @@ namespace ImageProcessing
             }
             var imageSize = new ImageSize(image.Width, image.Height);
             ResizeWidth(image, newSize.width);
+            Console.WriteLine("Width Resized");
 
             image.Mutate(ctx => ctx.RotateFlip(RotateMode.Rotate90, FlipMode.None));
-            ResizeWidth(image, newSize.height);
+            ResizeWidth(image, newSize.height, true);
             image.Mutate(ctx => ctx.RotateFlip(RotateMode.Rotate270, FlipMode.None));
+
+            Console.WriteLine("Height Resized");
 
             // Remove
             image.Mutate(ctx => ctx.Crop(new Rectangle(0, 0, newSize.width, newSize.height)));
         }
 
-        public void ResizeWidth(Image<Rgba32> image, int targetWidth, bool wisTransposed = false)
+        public void ResizeWidth(Image<Rgba32> image, int targetWidth, bool isTransposed = false)
         {
             int current_width = image.Width;
             while (current_width > targetWidth)
@@ -39,6 +42,10 @@ namespace ImageProcessing
                 Seam lowestSeam = FindSeam(imageSize, energy);
                 RemoveSeam(image, lowestSeam);
                 imageSize = new ImageSize(image.Width, image.Height);
+                if (!isTransposed)
+                    Console.WriteLine($"Current Size: ({image.Width}, {image.Height})");
+                else
+                    Console.WriteLine($"Current Size: ({image.Height}, {image.Width})");
                 current_width--;
             }
         }
@@ -54,7 +61,7 @@ namespace ImageProcessing
             var rEnergy = 0;
             if (right != null)
             {
-                var (rr, rg, rb, la) = right.Value;
+                var (rr, rg, rb, ra) = right.Value;
                 rEnergy = (rr - mr) * (rr - mr) + (rg - mg) * (rg - mg) + (rb - mb) * (rb - mb);
             }
 
@@ -142,7 +149,7 @@ namespace ImageProcessing
             if (!lastMinCoordinate.HasValue)
             {
                 Console.WriteLine("Failed to find the minimum energy seam");
-                return [];
+                return Array.Empty<Coordinate>();
             }
 
             // Re-create the seam
@@ -171,7 +178,7 @@ namespace ImageProcessing
                     image[x, y] = image[x + 1, y];
                 }
             }
-
+            image.Mutate(ctx => ctx.Crop(new Rectangle(0, 0, image.Width - 1, image.Height)));
         }
     }
 }
