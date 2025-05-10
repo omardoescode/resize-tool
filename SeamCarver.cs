@@ -9,6 +9,8 @@ namespace ImageProcessing
     using Seam = Coordinate[];
     public readonly record struct ImageSize(int width, int height);
     public readonly record struct Color(int r, int g, int b, int a);
+    public readonly record struct Coordinate(int x, int y);
+    public readonly record struct SeamPixel(double energy, Coordinate coordinate, Coordinate? previous = null);
     class SeamCarver
     {
         public void ProcessImage(Image<Rgba32> image, ImageSize newSize)
